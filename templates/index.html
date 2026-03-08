@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Test Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-shield-alt"></i> Secure Test Portal</h1>
+            <p>Enter your 6-digit PIN to access the test</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- PIN Input Section -->
+            <div class="pin-section">
+                <div class="pin-display">
+                    <input type="password" id="pin-input" maxlength="6" placeholder="••••••" class="pin-field">
+                    <button id="clear-pin" class="clear-btn" title="Clear">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Virtual PIN Pad -->
+                <div class="pin-pad">
+                    <div class="pin-pad-row">
+                        <button class="pin-btn" data-value="1">1</button>
+                        <button class="pin-btn" data-value="2">2</button>
+                        <button class="pin-btn" data-value="3">3</button>
+                    </div>
+                    <div class="pin-pad-row">
+                        <button class="pin-btn" data-value="4">4</button>
+                        <button class="pin-btn" data-value="5">5</button>
+                        <button class="pin-btn" data-value="6">6</button>
+                    </div>
+                    <div class="pin-pad-row">
+                        <button class="pin-btn" data-value="7">7</button>
+                        <button class="pin-btn" data-value="8">8</button>
+                        <button class="pin-btn" data-value="9">9</button>
+                    </div>
+                    <div class="pin-pad-row">
+                        <button class="pin-btn empty"></button>
+                        <button class="pin-btn" data-value="0">0</button>
+                        <button class="pin-btn backspace" title="Delete">
+                            <i class="fas fa-backspace"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Verify Button -->
+                <button id="verify-pin" class="verify-btn">
+                    <i class="fas fa-check-circle"></i> Verify PIN
+                </button>
+            </div>
+
+            <!-- Test Section -->
+            <div class="test-section">
+                <div class="test-card">
+                    <div class="test-icon">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                    <h2>Ready to Start Test?</h2>
+                    <p>Verify your PIN first to enable the test button</p>
+                    
+                    <!-- Test Start Button (Initially Disabled) -->
+                    <button id="start-test" class="start-test-btn" disabled>
+                        <i class="fas fa-play"></i> Test Start
+                    </button>
+
+                    <!-- Status Message -->
+                    <div id="status-message" class="status-message"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Secure Access System v1.0</p>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <i class="fas fa-info-circle" id="toast-icon"></i>
+            <span id="toast-message"></span>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

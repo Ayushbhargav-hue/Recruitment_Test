@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Secure Test Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <div class="admin-sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h3>Admin Panel</h3>
+            </div>
+            
+            <div class="admin-profile">
+                <div class="admin-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="admin-info">
+                    <h4>{{ session.get('admin_name', 'Admin') }}</h4>
+                    <p>Administrator</p>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="active" onclick="showSection('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="#candidates" onclick="showSection('candidates')">
+                    <i class="fas fa-users"></i> Candidates
+                </a>
+                <a href="#analytics" onclick="showSection('analytics')">
+                    <i class="fas fa-chart-bar"></i> Analytics
+                </a>
+                <a href="#settings" onclick="showSection('settings')">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+                <a href="/admin/logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="admin-main">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="admin-section active">
+                <div class="section-header">
+                    <h2><i class="fas fa-tachometer-alt"></i> Dashboard Overview</h2>
+                    <div class="date-time">{{ now.strftime('%B %d, %Y %H:%M') }}</div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>{{ stats.total_pin_verified|default(0) }}</h3>
+                            <p>PIN Verified</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+                            <i class="fas fa-file-signature"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>{{ stats.total_forms_completed|default(0) }}</h3>
+                            <p>Forms Completed</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+                            <i class="fas fa-flask"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>{{ stats.total_tests_started|default(0) }}</h3>
+                            <p>Tests Started</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-details">
+                            <h3>{{ stats.average_score|default('N/A') }}</h3>
+                            <p>Avg. Score</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="recent-activity">
+                    <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                    <div class="activity-list">
+                        {% for candidate in candidates[:5] %}
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                {% if candidate.current_status == 'Test Completed' %}
+                                <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                                {% elif candidate.current_status == 'Form Completed' %}
+                                <i class="fas fa-file-signature" style="color: #17a2b8;"></i>
+                                {% elif candidate.current_status == 'Form Started' %}
+                                <i class="fas fa-pen" style="color: #ffc107;"></i>
+                                {% else %}
+                                <i class="fas fa-user" style="color: #6c757d;"></i>
+                                {% endif %}
+                            </div>
+                            <div class="activity-details">
+                                <p>
+                                    <strong>{{ candidate.full_name or 'Unknown User' }}</strong> 
+                                    {{ candidate.current_status }}
+                                </p>
+                                <small>{{ candidate.pin_verified_time.strftime('%Y-%m-%d %H:%M') if candidate.pin_verified_time else 'N/A' }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- Candidates Section -->
+            <section id="candidates" class="admin-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-users"></i> Candidate Management</h2>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="search-candidates" placeholder="Search candidates...">
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filter-bar">
+                    <select id="status-filter" onchange="filterCandidates()">
+                        <option value="all">All Status</option>
+                        <option value="PIN Only">PIN Only</option>
+                        <option value="Form Started">Form Started</option>
+                        <option value="Form Completed">Form Completed</option>
+                        <option value="Test Completed">Test Completed</option>
+                    </select>
+                    
+                    <select id="date-filter" onchange="filterCandidates()">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                    
+                    <button class="export-btn" onclick="exportToCSV()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+
+                <!-- Candidates Table -->
+                <div class="table-responsive">
+                    <table class="candidates-table">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Name</th>
+                                <th>Contact</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>PIN Verified</th>
+                                <th>Form Completed</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="candidates-table-body">
+                            {% for candidate in candidates %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>
+                                    <div class="candidate-name">
+                                        <strong>{{ candidate.full_name or 'N/A' }}</strong>
+                                    </div>
+                                </td>
+                                <td>{{ candidate.contact_number or 'N/A' }}</td>
+                                <td>{{ candidate.email_id or 'N/A' }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ candidate.current_status|lower|replace(' ', '-') }}">
+                                        {{ candidate.current_status }}
+                                    </span>
+                                </td>
+                                <td>{{ candidate.pin_verified_time.strftime('%Y-%m-%d') if candidate.pin_verified_time else 'N/A' }}</td>
+                                <td>
+                                    {% if candidate.form_completed %}
+                                    <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                                    {% else %}
+                                    <i class="fas fa-times-circle" style="color: #dc3545;"></i>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="action-btn view-btn" onclick="viewCandidate('{{ candidate.session_id }}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="action-btn edit-btn" onclick="editCandidate('{{ candidate.session_id }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">Page 1 of 1</span>
+                    <button class="page-btn" disabled><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics" class="admin-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
+                </div>
+
+                <div class="analytics-grid">
+                    <!-- Chart 1: User Progress -->
+                    <div class="chart-card">
+                        <h3>User Progress Distribution</h3>
+                        <canvas id="progressChart"></canvas>
+                    </div>
+
+                    <!-- Chart 2: Daily Activity -->
+                    <div class="chart-card">
+                        <h3>Daily Activity (Last 7 Days)</h3>
+                        <canvas id="activityChart"></canvas>
+                    </div>
+
+                    <!-- Chart 3: Completion Rate -->
+                    <div class="chart-card">
+                        <h3>Completion Rate</h3>
+                        <canvas id="completionChart"></canvas>
+                    </div>
+
+                    <!-- Chart 4: Score Distribution -->
+                    <div class="chart-card">
+                        <h3>Score Distribution</h3>
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="admin-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cog"></i> Settings</h2>
+                </div>
+
+                <div class="settings-grid">
+                    <!-- PIN Settings -->
+                    <div class="settings-card">
+                        <h3><i class="fas fa-key"></i> PIN Configuration</h3>
+                        <form id="pin-settings-form">
+                            <div class="form-group">
+                                <label>Current Application PIN</label>
+                                <input type="text" id="current-pin" value="123124" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>New PIN</label>
+                                <input type="password" id="new-pin" maxlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label>Confirm New PIN</label>
+                                <input type="password" id="confirm-pin" maxlength="6">
+                            </div>
+                            <button type="submit" class="settings-save-btn">Update PIN</button>
+                        </form>
+                    </div>
+
+                    <!-- Admin Users -->
+                    <div class="settings-card">
+                        <h3><i class="fas fa-user-shield"></i> Admin Users</h3>
+                        <div class="admin-list">
+                            <!-- Admin list will be populated here -->
+                        </div>
+                        <button class="add-admin-btn" onclick="addAdmin()">
+                            <i class="fas fa-plus"></i> Add New Admin
+                        </button>
+                    </div>
+
+                    <!-- System Settings -->
+                    <div class="settings-card">
+                        <h3><i class="fas fa-globe"></i> System Settings</h3>
+                        <form id="system-settings-form">
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="maintenance-mode">
+                                    Maintenance Mode
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="email-notifications" checked>
+                                    Email Notifications
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>Session Timeout (minutes)</label>
+                                <input type="number" id="session-timeout" value="30" min="5" max="120">
+                            </div>
+                            <button type="submit" class="settings-save-btn">Save Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Candidate Details Modal -->
+    <div id="candidate-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Candidate Details</h3>
+                <span class="close-modal" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="candidate-details">
+                <!-- Details will be populated via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <i class="fas fa-info-circle" id="toast-icon"></i>
+            <span id="toast-message"></span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/admin-dashboard.js') }}"></script>
+</body>
+</html>

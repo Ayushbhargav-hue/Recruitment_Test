@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Information Form</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/form-style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-user-circle"></i> Candidate Information</h1>
+            <p>Please fill in your details to proceed</p>
+            <div class="progress-bar">
+                <div class="progress-step completed">
+                    <i class="fas fa-check"></i>
+                    <span>PIN Verified</span>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step active">
+                    <i class="fas fa-user"></i>
+                    <span>Information</span>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step">
+                    <i class="fas fa-flask"></i>
+                    <span>Test</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Information Form -->
+        <div class="form-container">
+            <form id="candidate-form">
+                <!-- Personal Information -->
+                <div class="form-section">
+                    <h2><i class="fas fa-user"></i> Personal Information</h2>
+                    
+                    <div class="form-group">
+                        <label for="full_name">Full Name <span class="required">*</span></label>
+                        <input type="text" id="full_name" name="full_name" class="form-control" 
+                               placeholder="Enter your full name" required>
+                        <div class="error-message" id="full_name_error"></div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="contact_number">Contact Number <span class="required">*</span></label>
+                            <input type="tel" id="contact_number" name="contact_number" class="form-control" 
+                                   placeholder="10-digit mobile number" maxlength="10" required>
+                            <div class="error-message" id="contact_number_error"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="alternate_contact">Alternate Contact (Optional)</label>
+                            <input type="tel" id="alternate_contact" name="alternate_contact" class="form-control" 
+                                   placeholder="10-digit mobile number" maxlength="10">
+                            <div class="error-message" id="alternate_contact_error"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email_id">Email ID <span class="required">*</span></label>
+                        <input type="email" id="email_id" name="email_id" class="form-control" 
+                               placeholder="Enter your email address" required>
+                        <div class="error-message" id="email_id_error"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address <span class="required">*</span></label>
+                        <textarea id="address" name="address" class="form-control" 
+                                  placeholder="Enter your complete address" rows="3" required></textarea>
+                        <div class="error-message" id="address_error"></div>
+                    </div>
+                </div>
+
+                <!-- Work Experience -->
+                <div class="form-section">
+                    <h2><i class="fas fa-briefcase"></i> Work Experience</h2>
+                    
+                    <div class="form-group">
+                        <label>Do you have work experience? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="work_experience" value="yes"> Yes
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="work_experience" value="no" checked> No
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="experience-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="company_name">Company Name</label>
+                            <input type="text" id="company_name" name="company_name" class="form-control" 
+                                   placeholder="Enter company name">
+                            <div class="error-message" id="company_name_error"></div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="total_experience">Total Experience (Years)</label>
+                                <input type="number" id="total_experience" name="total_experience" class="form-control" 
+                                       placeholder="e.g., 2.5" step="0.5" min="0">
+                                <div class="error-message" id="total_experience_error"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="current_salary">Current Salary (₹)</label>
+                                <input type="number" id="current_salary" name="current_salary" class="form-control" 
+                                       placeholder="e.g., 50000" step="1000" min="0">
+                                <div class="error-message" id="current_salary_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" id="save-draft" class="btn-secondary">
+                        <i class="fas fa-save"></i> Save Draft
+                    </button>
+                    <button type="submit" id="submit-form" class="btn-primary" disabled>
+                        <i class="fas fa-arrow-right"></i> Proceed to Test
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Secure Test Portal - Candidate Information</p>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <i class="fas fa-info-circle" id="toast-icon"></i>
+            <span id="toast-message"></span>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/form-script.js') }}"></script>
+</body>
+</html>
