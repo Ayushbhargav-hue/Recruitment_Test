@@ -110,6 +110,10 @@ class Database:
                 cursor.execute(query)
                 result = cursor.fetchone()
                 
+                # IMPORTANT: Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 if result:
                     stored_pin = result['authentication_password']
                     return entered_pin == stored_pin
@@ -141,6 +145,10 @@ class Database:
                 check_query = "SELECT id FROM candidate_info WHERE session_id = %s"
                 cursor.execute(check_query, (session_id,))
                 existing = cursor.fetchone()
+                
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
                 
                 current_time = datetime.now()
                 
@@ -203,6 +211,10 @@ class Database:
                         form_data.get('form_completed', True)
                     ))
                 
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 connection.commit()
                 logger.info(f"Candidate info saved for session: {session_id}")
                 return True
@@ -229,6 +241,10 @@ class Database:
                 query = "SELECT * FROM candidate_info WHERE session_id = %s"
                 cursor.execute(query, (session_id,))
                 result = cursor.fetchone()
+                
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
                 
                 return result
                 
@@ -289,9 +305,22 @@ class Database:
                 )
                 """)
                 
-                # Check if default admin exists, if not create one
+                connection.commit()
+                logger.info("Admin tables created successfully")
+                
+                # Now check for default admin (use a separate cursor)
+                # First consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 cursor.execute("SELECT * FROM admin_users WHERE username = 'ayush bhargav'")
-                if not cursor.fetchone():
+                result = cursor.fetchone()
+                
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
+                if not result:
                     # Using proper password hashing
                     import hashlib
                     hashed_password = hashlib.sha256('ayush'.encode()).hexdigest()
@@ -302,9 +331,13 @@ class Database:
                     """
                     current_time = datetime.now()
                     cursor.execute(insert_query, ('ayush bhargav', hashed_password, 'Ayush Bhargav', current_time, current_time))
-                
-                connection.commit()
-                logger.info("Admin tables created successfully")
+                    
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
+                    
+                    connection.commit()
+                    logger.info("Default admin created")
                 
         except Error as e:
             logger.error(f"Error creating admin tables: {e}")
@@ -333,6 +366,10 @@ class Database:
                 cursor.execute(query, (username, password))
                 admin = cursor.fetchone()
                 
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 return admin
                 
         except Error as e:
@@ -358,12 +395,20 @@ class Database:
                 update_query = "UPDATE admin_users SET last_login = %s WHERE id = %s"
                 cursor.execute(update_query, (datetime.now(), admin_id))
                 
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 # Insert login history
                 insert_query = """
                 INSERT INTO admin_login_history (admin_id, login_time, ip_address, user_agent)
                 VALUES (%s, %s, %s, %s)
                 """
                 cursor.execute(insert_query, (admin_id, datetime.now(), ip_address, user_agent))
+                
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
                 
                 connection.commit()
                 logger.info(f"Admin login updated for ID: {admin_id}")
@@ -399,6 +444,10 @@ class Database:
                 )
                 """)
                 
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 connection.commit()
                 logger.info("Test results table created successfully")
                 
@@ -430,9 +479,19 @@ class Database:
                 """)
                 
                 result = cursor.fetchone()
+                
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 if result and result[0] == 0:
                     alter_query = "ALTER TABLE pin_attempts ADD COLUMN session_id VARCHAR(100)"
                     cursor.execute(alter_query)
+                    
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
+                    
                     connection.commit()
                     logger.info("Added session_id column to pin_attempts table")
                 else:
@@ -455,19 +514,38 @@ class Database:
         Database.update_pin_attempts_table()
         
         # Insert default PIN if not exists
-        connection = Database.get_connection()
-        if connection:
-            cursor = connection.cursor()
-            cursor.execute("SELECT * FROM authentication WHERE authentication_name = 'Application_pin'")
-            if not cursor.fetchone():
-                cursor.execute("""
-                INSERT INTO authentication (datetime, authentication_name, authentication_password)
-                VALUES (%s, %s, %s)
-                """, (datetime.now(), 'Application_pin', '123456'))  # Default PIN
-                connection.commit()
-                logger.info("Default PIN inserted")
-            cursor.close()
-            connection.close()
+        connection = None
+        cursor = None
+        try:
+            connection = Database.get_connection()
+            if connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT * FROM authentication WHERE authentication_name = 'Application_pin'")
+                result = cursor.fetchone()
+                
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
+                if not result:
+                    cursor.execute("""
+                    INSERT INTO authentication (datetime, authentication_name, authentication_password)
+                    VALUES (%s, %s, %s)
+                    """, (datetime.now(), 'Application_pin', '123124'))  # Default PIN
+                    
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
+                    
+                    connection.commit()
+                    logger.info("Default PIN inserted")
+        except Error as e:
+            logger.error(f"Error inserting default PIN: {e}")
+        finally:
+            if cursor:
+                cursor.close()
+            if connection and connection.is_connected():
+                connection.close()
 
     @staticmethod
     def log_pin_attempt(entered_pin, success, ip_address, session_id=None):
@@ -488,12 +566,19 @@ class Database:
                 AND COLUMN_NAME = 'session_id'
                 """)
                 
-                if cursor.fetchone()[0] > 0:
+                column_check = cursor.fetchone()
+                
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
+                current_time = datetime.now()
+                
+                if column_check and column_check[0] > 0:
                     insert_query = """
                     INSERT INTO pin_attempts (datetime, entered_pin, success, ip_address, session_id)
                     VALUES (%s, %s, %s, %s, %s)
                     """
-                    current_time = datetime.now()
                     cursor.execute(insert_query, (current_time, entered_pin, success, ip_address, session_id))
                 else:
                     # Fallback if column doesn't exist
@@ -501,8 +586,11 @@ class Database:
                     INSERT INTO pin_attempts (datetime, entered_pin, success, ip_address)
                     VALUES (%s, %s, %s, %s)
                     """
-                    current_time = datetime.now()
                     cursor.execute(insert_query, (current_time, entered_pin, success, ip_address))
+                
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
                 
                 connection.commit()
                 logger.info(f"PIN attempt logged: success={success}, session={session_id}")
@@ -548,6 +636,10 @@ class Database:
                 cursor.execute(query)
                 candidates = cursor.fetchall()
                 
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 return candidates
                 
         except Error as e:
@@ -588,6 +680,10 @@ class Database:
                 cursor.execute(query, (session_id,))
                 details = cursor.fetchone()
                 
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+                
                 return details
                 
         except Error as e:
@@ -622,6 +718,9 @@ class Database:
                 try:
                     cursor.execute("SELECT COUNT(*) as count FROM pin_attempts WHERE success = 1")
                     result = cursor.fetchone()
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
                     stats['total_pin_verified'] = result['count'] if result else 0
                 except Exception as e:
                     logger.error(f"Error getting PIN verifications: {e}")
@@ -630,6 +729,9 @@ class Database:
                 try:
                     cursor.execute("SELECT COUNT(*) as count FROM candidate_info")
                     result = cursor.fetchone()
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
                     stats['total_forms_started'] = result['count'] if result else 0
                 except Exception as e:
                     logger.error(f"Error getting forms started: {e}")
@@ -638,6 +740,9 @@ class Database:
                 try:
                     cursor.execute("SELECT COUNT(*) as count FROM candidate_info WHERE form_completed = 1")
                     result = cursor.fetchone()
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
                     stats['total_forms_completed'] = result['count'] if result else 0
                 except Exception as e:
                     logger.error(f"Error getting forms completed: {e}")
@@ -646,6 +751,9 @@ class Database:
                 try:
                     cursor.execute("SELECT COUNT(*) as count FROM test_results")
                     result = cursor.fetchone()
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
                     stats['total_tests_started'] = result['count'] if result else 0
                 except Exception as e:
                     logger.error(f"Error getting tests started: {e}")
@@ -658,6 +766,9 @@ class Database:
                     WHERE DATE(datetime) = %s
                     """, (today,))
                     result = cursor.fetchone()
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
                     stats['today_activity'] = result['count'] if result else 0
                 except Exception as e:
                     logger.error(f"Error getting today's activity: {e}")
@@ -666,6 +777,9 @@ class Database:
                 try:
                     cursor.execute("SELECT AVG(score) as avg_score FROM test_results")
                     result = cursor.fetchone()
+                    # Consume any remaining results
+                    while cursor.nextset():
+                        pass
                     stats['average_score'] = result['avg_score'] if result and result['avg_score'] else None
                 except Exception as e:
                     logger.error(f"Error getting average score: {e}")
@@ -675,6 +789,191 @@ class Database:
         except Error as e:
             logger.error(f"Error getting admin stats: {e}")
             return {}
+        finally:
+            if cursor:
+                cursor.close()
+            if connection and connection.is_connected():
+                connection.close()
+                
+                
+    @staticmethod
+    def has_test_started(session_id):
+        """Check if test has already started for this session"""
+        connection = None
+        cursor = None
+        try:
+            connection = Database.get_connection()
+            if connection:
+                cursor = connection.cursor(dictionary=True)
+            
+                query = """
+            SELECT id FROM test_results 
+            WHERE session_id = %s AND (test_start_time IS NOT NULL OR test_end_time IS NOT NULL)
+            """
+                cursor.execute(query, (session_id,))
+                result = cursor.fetchone()
+            
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+            
+                return result is not None
+            
+        except Error as e:
+            logger.error(f"Error checking test started: {e}")
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if connection and connection.is_connected():
+                connection.close()
+
+    @staticmethod
+    def get_test_status(session_id):
+        """Get test status for a session"""
+        connection = None
+        cursor = None
+        try:
+            connection = Database.get_connection()
+            if connection:
+                cursor = connection.cursor(dictionary=True)
+            
+                query = """
+            SELECT test_start_time, test_end_time, score 
+            FROM test_results 
+            WHERE session_id = %s
+            """
+                cursor.execute(query, (session_id,))
+                result = cursor.fetchone()
+            
+            # Consume any remaining results
+                while cursor.nextset():
+                    pass
+            
+                if result:
+                    return {
+                    'test_started': result['test_start_time'] is not None,
+                    'test_completed': result['test_end_time'] is not None,
+                    'score': result['score']
+                }
+                else:
+                    return {
+                    'test_started': False,
+                    'test_completed': False,
+                    'score': None
+                }
+            
+        except Error as e:
+            logger.error(f"Error getting test status: {e}")
+            return {'test_started': False, 'test_completed': False, 'score': None}
+        finally:
+            if cursor:
+                cursor.close()
+            if connection and connection.is_connected():
+                connection.close()
+
+    @staticmethod
+    def mark_test_started(session_id):
+        """Mark that test has started for this session"""
+        connection = None
+        cursor = None
+        try:
+            connection = Database.get_connection()
+            if connection:
+                cursor = connection.cursor()
+            
+            # Check if record exists
+                check_query = "SELECT id FROM test_results WHERE session_id = %s"
+                cursor.execute(check_query, (session_id,))
+                existing = cursor.fetchone()
+            
+            # Consume any remaining results
+                while cursor.nextset():
+                    pass
+            
+                if existing:
+                    # Update existing record
+                    update_query = """
+                UPDATE test_results 
+                SET test_start_time = %s
+                WHERE session_id = %s AND test_start_time IS NULL
+                """
+                    cursor.execute(update_query, (datetime.now(), session_id))
+                else:
+                    # Insert new record
+                    insert_query = """
+                INSERT INTO test_results (session_id, test_start_time, created_at)
+                VALUES (%s, %s, %s)
+                """
+                    cursor.execute(insert_query, (session_id, datetime.now(), datetime.now()))
+            
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+            
+                connection.commit()
+                logger.info(f"Test started marked for session: {session_id}")
+                return True
+            
+        except Error as e:
+            logger.error(f"Error marking test started: {e}")
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if connection and connection.is_connected():
+                connection.close()
+
+    @staticmethod
+    def save_test_results(session_id, answers, score):
+        """Save test results"""
+        connection = None
+        cursor = None
+        try:
+            connection = Database.get_connection()
+            if connection:
+                cursor = connection.cursor()
+            
+            # Convert answers to JSON string
+                import json
+                answers_json = json.dumps(answers)
+            
+            # Check if record exists
+                check_query = "SELECT id FROM test_results WHERE session_id = %s"
+                cursor.execute(check_query, (session_id,))
+                existing = cursor.fetchone()
+            
+            # Consume any remaining results
+                while cursor.nextset():
+                    pass
+            
+                if existing:
+                    # Update existing record
+                    update_query = """
+                UPDATE test_results 
+                SET test_end_time = %s, score = %s, answers = %s
+                WHERE session_id = %s
+                """
+                    cursor.execute(update_query, (datetime.now(), score, answers_json, session_id))
+                else:
+                    # Insert new record
+                    insert_query = """
+                INSERT INTO test_results (session_id, test_start_time, test_end_time, score, answers, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                    cursor.execute(insert_query, (session_id, datetime.now(), datetime.now(), score, answers_json, datetime.now()))
+            
+                # Consume any remaining results
+                while cursor.nextset():
+                    pass
+            
+                connection.commit()
+                logger.info(f"Test results saved for session: {session_id}")
+                return True
+            
+        except Error as e:
+            logger.error(f"Error saving test results: {e}")
+            return False
         finally:
             if cursor:
                 cursor.close()

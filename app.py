@@ -76,9 +76,15 @@ def information_form():
     if candidate_session:
         existing_data = Database.get_candidate_info(candidate_session)
         if existing_data and existing_data.get('form_completed'):
+            # If form is completed, redirect to test page
+            return redirect(url_for('test_page'))
+        
+        # Check if test has already started
+        if Database.has_test_started(candidate_session):
             return redirect(url_for('test_page'))
     
     return render_template('information_form.html')
+
 
 @app.route('/save-candidate-info', methods=['POST'])
 def save_candidate_info():
@@ -118,6 +124,7 @@ def save_candidate_info():
         
         if Database.save_candidate_info(candidate_session, form_data):
             session['form_completed'] = True
+            session['test_started'] = True  # Mark test as started in session
             return jsonify({
                 'success': True,
                 'message': 'Information saved successfully!',
@@ -142,7 +149,22 @@ def test_page():
     if not session.get('pin_verified') or not session.get('form_completed'):
         return redirect(url_for('index'))
     
+    candidate_session = session.get('candidate_session')
+    
+    # Check if test has already started/completed
+    test_status = Database.get_test_status(candidate_session)
+    
+    if test_status.get('test_completed'):
+        # If test is completed, show completion message
+        return render_template('test_completed.html', score=test_status.get('score'))
+    
+    # Mark test as started in database if not already
+    if not test_status.get('test_started'):
+        Database.mark_test_started(candidate_session)
+        session['test_started'] = True
+    
     return render_template('test_page.html')
+
 
 @app.route('/start-test', methods=['POST'])
 def start_test():
@@ -358,6 +380,50 @@ def test_data():
         connection.close()
     
     return jsonify(data)
+
+
+@app.route('/submit-test', methods=['POST'])
+def submit_test():
+    """Submit test answers"""
+    if not session.get('pin_verified') or not session.get('form_completed'):
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    try:
+        data = request.get_json()
+        candidate_session = session.get('candidate_session')
+        answers = data.get('answers', [])
+        
+        # Calculate score (implement your scoring logic)
+        score = calculate_score(answers)  # You need to implement this function
+        
+        # Save test results
+        if Database.save_test_results(candidate_session, answers, score):
+            session['test_completed'] = True
+            return jsonify({
+                'success': True,
+                'message': 'Test submitted successfully',
+                'score': score
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to submit test'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error submitting test: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Server error'
+        }), 500
+
+def calculate_score(answers):
+    """Calculate test score - implement your logic here"""
+    # This is a placeholder - implement your actual scoring logic
+    total_questions = len(answers)
+    correct_answers = sum(1 for answer in answers if answer.get('correct', False))
+    return (correct_answers / total_questions) * 100 if total_questions > 0 else 0
+
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -148,4 +148,18 @@
 
     <script src="{{ url_for('static', filename='js/form-script.js') }}"></script>
 </body>
+<script>
+    // Prevent going back to PIN page
+    (function() {
+        history.pushState(null, null, location.href);
+        window.onpopstate = function() {
+            history.go(1);
+        };
+    })();
+
+    // Prevent form resubmission on refresh
+    if (window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.href);
+    }
+</script>
 </html>

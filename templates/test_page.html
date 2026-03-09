@@ -32,4 +32,37 @@
         </div>
     </div>
 </body>
+<script>
+    // Prevent back button
+    (function() {
+        // Push a new state to the history
+        history.pushState(null, null, location.href);
+        
+        // When user tries to go back, push another state
+        window.onpopstate = function() {
+            history.go(1);
+        };
+    })();
+
+    // Prevent refresh and tab close during test
+    window.onbeforeunload = function() {
+        return "Are you sure you want to leave? Your test progress will be lost!";
+    };
+
+    // Disable right click (optional)
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+
+    // Disable keyboard shortcuts for navigation
+    document.addEventListener('keydown', function(e) {
+        // Disable F5, Ctrl+R, Ctrl+Shift+R, Ctrl+F5, Backspace
+        if (e.key === 'F5' || 
+            (e.ctrlKey && e.key === 'r') || 
+            (e.ctrlKey && e.shiftKey && e.key === 'r') ||
+            (e.key === 'Backspace' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA')) {
+            e.preventDefault();
+        }
+    });
+</script>
 </html>
